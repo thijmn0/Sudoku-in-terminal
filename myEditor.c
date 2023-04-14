@@ -54,13 +54,15 @@ _Bool enable_raw_mode(int fd){
     // control chars - set return condition: min number of bytes and timer. 
     raw.c_cc[VMIN] = 0; // Return each byte, or zero for timeout. 
     raw.c_cc[VTIME] = 1; // 100 ms timeout (unit is tens of second). 
-	tcsetattr(STDIN_FILENO, TCSAFLUSH,&raw);
+	if(tcsetattr(STDIN_FILENO, TCSAFLUSH,&raw)<0) goto fatal;
 	E.raw_mode=1;
 
 fatal:
 	errno=ENOTTY;
 	return -1;
 }
+
+#define ABUF_INIT {NULL,0};
 
 struct abuf{
 	char* b;
@@ -76,19 +78,19 @@ void abAppend(struct abuf *ab, const char *s, int len) {
     ab->len += len;
 }
 
-void print_large_generated_sudoku(uint8_t* sudoku){
+void abFree(struct abuf *ab) {
+    free(ab->b);
+}
+
+void print_large_sudoku(uint8_t* sudoku){
 	const char num[]="▗▄  █ ▗█▖▗▄▖▗▄▌▐▄▖▗▄▖▗▄▌▗▄▌▄ ▄▜▃█  █▗▄▖▐▄▖▗▄▌▄▄▖▙▄▖▙▄▌▄▄▖  ▌  ▌▄▄▖▙▄▌▙▄▌▄▄▖▙▄▌▄▄▌";
 	// ▗▄  ▗▄▖ ▗▄▖ ▄ ▄ ▗▄▖ ▄▄▖ ▄▄▖ ▄▄▖ ▄▄▖
 	//  █  ▗▄▌ ▗▄▌ ▜▃█ ▐▄▖ ▙▄▖   ▌ ▙▄▌ ▙▄▌
 	// ▗█▖ ▐▄▖ ▗▄▌   █ ▗▄▌ ▙▄▌   ▌ ▙▄▌ ▄▄▌
-	unsigned int cx=0;
-	unsigned int cy=0;
-	char buffer[319];
-	unsigned int lenbuffer;
 
-    //lenbuffer=snprintf(buffer,sizeof(buffer),"┏━━━━━━━┯━━━━━━━┯━━━━━━━┳━━━━━━━┯━━━━━━━┯━━━━━━━┳━━━━━━━┯━━━━━━━┯━━━━━━━┓\r\n┃       ╎       ╎       ┃       ╎       ╎       ┃       ╎       ╎       ┃\r\n┃");
+    write(STDOUT_FILENO,"┏━━━━━━━┯━━━━━━━┯━━━━━━━┳━━━━━━━┯━━━━━━━┯━━━━━━━┳━━━━━━━┯━━━━━━━┯━━━━━━━┓\r\n┃       ╎       ╎       ┃       ╎       ╎       ┃       ╎       ╎       ┃\r\n┃",319);
     
-    for(uint8_t i=0;i<243;i++){
+    for(uint8_t i=0;i<81;i++){
     	//TODO 	
     	if(*(sudoku+i)==0){
     		write(STDOUT_FILENO,"       ",7);
@@ -123,38 +125,93 @@ void print_large_generated_sudoku(uint8_t* sudoku){
     //write buffer
 }
 
+void print_large_generated_sudoku(uint8_t* sudoku){
+	///im lazy; ill improve it later
+	const uint8_t num_len[]={7,5,9,9,9,9,9,9,9,7,9,5,9,9,9,9,9,9,9,5,5,9,9,9,9,9,9};
+	const char* num[]={"▗▄ "," █ ","▗█▖","▗▄▖","▗▄▌","▐▄▖","▗▄▖","▗▄▌","▗▄▌","▄ ▄","▜▃█","  █","▗▄▖","▐▄▖","▗▄▌","▄▄▖","▙▄▖","▙▄▌","▄▄▖","  ▌","  ▌","▄▄▖","▙▄▌","▙▄▌","▄▄▖","▙▄▌","▄▄▌"};
+	// ▗▄  ▗▄▖ ▗▄▖ ▄ ▄ ▗▄▖ ▄▄▖ ▄▄▖ ▄▄▖ ▄▄▖
+	//  █  ▗▄▌ ▗▄▌ ▜▃█ ▐▄▖ ▙▄▖   ▌ ▙▄▌ ▙▄▌
+	// ▗█▖ ▐▄▖ ▗▄▌   █ ▗▄▌ ▙▄▌   ▌ ▙▄▌ ▄▄▌
+	struct abuf ab=ABUF_INIT;
+	abAppend(&ab,"\x1b[?25l",6);
+	abAppend(&ab,"\x1b[H",3);
+    abAppend(&ab,"┏━━━━━━━┯━━━━━━━┯━━━━━━━┳━━━━━━━┯━━━━━━━┯━━━━━━━┳━━━━━━━┯━━━━━━━┯━━━━━━━┓\r\n┃  ",226);//8*9*3+3+2+10*9+3+2+3
+    for(uint8_t i=0,j=0;i<81;i++){
+    	if(*(sudoku+i)==0){
+    		abAppend(&ab,"   ",3);
+    	}
+    	else{
+    		uint8_t p=(*(sudoku+i)-1)*3+j;
+    		abAppend(&ab,num[p],num_len[p]);
+    	}
+    	if(i%9==8){
+    		if(j!=2){
+    			i-=9;
+    			j++;
+    			abAppend(&ab,"  ┃\r\n┃  ",12);
+    		}else{
+    			j=0;
+	    		if(i!=80){
+	    			if(i%27==26){
+	    				abAppend(&ab,"  ┃\r\n┣━━━━━━━┿━━━━━━━┿━━━━━━━╋━━━━━━━┿━━━━━━━┿━━━━━━━╋━━━━━━━┿━━━━━━━┿━━━━━━━┫\r\n┃  ",233);//97*2+3+219 
+	    			}
+	    			else{
+						abAppend(&ab,"  ┃\r\n┣╶╶╶╶╶╶╶├╶╶╶╶╶╶╶├╶╶╶╶╶╶╶┠╶╶╶╶╶╶╶├╶╶╶╶╶╶╶├╶╶╶╶╶╶╶┠╶╶╶╶╶╶╶├╶╶╶╶╶╶╶├╶╶╶╶╶╶╶┃\r\n┃  ",233);
+	    			}
+	    		}
+	    		else{
+	    			abAppend(&ab,"  ┃\r\n┗━━━━━━━┷━━━━━━━┷━━━━━━━┻━━━━━━━┷━━━━━━━┷━━━━━━━┻━━━━━━━┷━━━━━━━┷━━━━━━━┛\r\n",228);
+	    		}
+    		}
+    	}
+    	else if(i%3==2){
+    		abAppend(&ab,"  ┃  ",7);
+    	}
+    	else{
+    		abAppend(&ab,"  ╎  ",7);
+    	}
+    }
+    write(STDOUT_FILENO,ab.b,ab.len);
+    abFree(&ab);
+}
+
 void print_small_sudoku(uint8_t* sudoku){
-    write(STDOUT_FILENO,"╭───────┬───────┬───────╮\r\n│ ",82);
+	//snprintf maybe
+	struct abuf ab=ABUF_INIT;
+	abAppend(&ab,"\x1b[?25l",6);
+	abAppend(&ab,"\x1b[H",3);
+    abAppend(&ab,"╭───────┬───────┬───────╮\r\n│ ",82);
     for(uint8_t i=0;i<81;i++){
     	if(*(sudoku+i)==0){
-    		write(STDOUT_FILENO,"·",3);
+    		abAppend(&ab,"·",3);
     	}
     	else{
     		char c[2];
     		c[0]=48+*(sudoku+i);
     		c[1]='\0';
-    		write(STDOUT_FILENO,c,2);
+    		abAppend(&ab,c,2);
     	}
     	if(i%9==8){
-    		write(STDOUT_FILENO," │\r\n",6);
     		if(i!=80){
     			if(i%27==26){
-    				write(STDOUT_FILENO,"├───────┼───────┼───────┤\r\n│ ",82);
+    				abAppend(&ab," │\r\n├───────┼───────┼───────┤\r\n│ ",88);
     			}
     			else{
-    				write(STDOUT_FILENO,"│ ",4);
+    				abAppend(&ab," │\r\n│ ",10);
     			}
     		}
     		else{
-    			write(STDOUT_FILENO,"╰───────┴───────┴───────╯\r\n",78);
+    			abAppend(&ab," │\r\n╰───────┴───────┴───────╯\r\n",84);
     		}
     	}
     	else if(i%3==2){
-    		write(STDOUT_FILENO," │ ",5);
+    		abAppend(&ab," │ ",5);
     	}else{
-    		write(STDOUT_FILENO," ",1);
+    		abAppend(&ab," ",1);
     	}
     }
+    write(STDOUT_FILENO,ab.b,ab.len);
+    abFree(&ab);
 }
 
 _Bool process_key(void){
@@ -170,9 +227,10 @@ int main(int argc, char **argv){
 	//system("clear");
 	E.raw_mode=0;
 	enable_raw_mode(STDIN_FILENO);
-	write(STDOUT_FILENO,"\x1b[0;0H",6);
+	// write(STDOUT_FILENO,"\x1b[0;0H",6);
 	uint8_t grid[81]={0,0,0,0,0,0,0,1,2,0,0,0,0,3,5,0,0,0,0,0,0,6,0,0,0,7,0,7,0,0,0,0,0,3,0,0,0,0,0,4,0,0,8,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,2,0,0,0,0,0,8,0,0,0,0,0,4,0,0,5,0,0,0,0,6,0,0};
-	print_small_sudoku(grid);
+	//aa(grid);
+	print_large_generated_sudoku(grid);
 	// write(STDOUT_FILENO,"\033[?1003h",8);
 	while(1){
 		if(process_key()){
@@ -181,5 +239,6 @@ int main(int argc, char **argv){
 	}
 	printf("\033[?1003l");
 	// system("clear");
+	disable_raw_mode();
 	return 0;
 }
