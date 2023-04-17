@@ -74,59 +74,15 @@ void abAppend(struct abuf *ab, const char *s, int len) {
 
     if (new == NULL) return;
     memcpy(new+ab->len,s,len);
-    ab->b = new;
-    ab->len += len;
+    ab->len+=len;
+    ab->b=new;
 }
 
 void abFree(struct abuf *ab) {
     free(ab->b);
 }
 
-void print_large_sudoku(uint8_t* sudoku){
-	const char num[]="▗▄  █ ▗█▖▗▄▖▗▄▌▐▄▖▗▄▖▗▄▌▗▄▌▄ ▄▜▃█  █▗▄▖▐▄▖▗▄▌▄▄▖▙▄▖▙▄▌▄▄▖  ▌  ▌▄▄▖▙▄▌▙▄▌▄▄▖▙▄▌▄▄▌";
-	// ▗▄  ▗▄▖ ▗▄▖ ▄ ▄ ▗▄▖ ▄▄▖ ▄▄▖ ▄▄▖ ▄▄▖
-	//  █  ▗▄▌ ▗▄▌ ▜▃█ ▐▄▖ ▙▄▖   ▌ ▙▄▌ ▙▄▌
-	// ▗█▖ ▐▄▖ ▗▄▌   █ ▗▄▌ ▙▄▌   ▌ ▙▄▌ ▄▄▌
-
-    write(STDOUT_FILENO,"┏━━━━━━━┯━━━━━━━┯━━━━━━━┳━━━━━━━┯━━━━━━━┯━━━━━━━┳━━━━━━━┯━━━━━━━┯━━━━━━━┓\r\n┃       ╎       ╎       ┃       ╎       ╎       ┃       ╎       ╎       ┃\r\n┃",319);
-    
-    for(uint8_t i=0;i<81;i++){
-    	//TODO 	
-    	if(*(sudoku+i)==0){
-    		write(STDOUT_FILENO,"       ",7);
-    	}
-    	else{
-    		char c[7]="       ";
-    		c[3]=48+*(sudoku+i);
-    		write(STDOUT_FILENO,c,7);
-    	}
-    	if(i%9==8){
-    		write(STDOUT_FILENO,"┃\r\n┃",8);
-
-    		if(i!=80){
-    			if(i%27==26){
-    				write(STDOUT_FILENO,"       ╎       ╎       ┃       ╎       ╎       ┃       ╎       ╎       ┃\r\n┣━━━━━━━┿━━━━━━━┿━━━━━━━╋━━━━━━━┿━━━━━━━┿━━━━━━━╋━━━━━━━┿━━━━━━━┿━━━━━━━┫\r\n┃       ╎       ╎       ┃       ╎       ╎       ┃       ╎       ╎       ┃\r\n┃",411);//97*2+3+219 
-    			}
-    			else{
-					write(STDOUT_FILENO,"       ╎       ╎       ┃       ╎       ╎       ┃       ╎       ╎       ┃\r\n┣╶╶╶╶╶╶╶├╶╶╶╶╶╶╶├╶╶╶╶╶╶╶┠╶╶╶╶╶╶╶├╶╶╶╶╶╶╶├╶╶╶╶╶╶╶┠╶╶╶╶╶╶╶├╶╶╶╶╶╶╶├╶╶╶╶╶╶╶┃\r\n┃       ╎       ╎       ┃       ╎       ╎       ┃       ╎       ╎       ┃\r\n┃",411);
-    			}
-    		}
-    		else{
-    			write(STDOUT_FILENO,"       ╎       ╎       ┃       ╎       ╎       ┃       ╎       ╎       ┃\r\n┗━━━━━━━┷━━━━━━━┷━━━━━━━┻━━━━━━━┷━━━━━━━┷━━━━━━━┻━━━━━━━┷━━━━━━━┷━━━━━━━┛\r\n",313);
-    		}
-    	}
-    	else if(i%3==2){
-    		write(STDOUT_FILENO,"┃",3);
-    	}
-    	else{
-    		write(STDOUT_FILENO,"╎",3);
-    	}
-    }
-    //write buffer
-}
-
-void print_large_generated_sudoku(uint8_t* sudoku){
-	///im lazy; ill improve it later
+void print_large_sudoku(uint8_t sudoku[81]){
 	const uint8_t num_len[]={7,5,9,9,9,9,9,9,9,7,9,5,9,9,9,9,9,9,9,5,5,9,9,9,9,9,9};
 	const char* num[]={"▗▄ "," █ ","▗█▖","▗▄▖","▗▄▌","▐▄▖","▗▄▖","▗▄▌","▗▄▌","▄ ▄","▜▃█","  █","▗▄▖","▐▄▖","▗▄▌","▄▄▖","▙▄▖","▙▄▌","▄▄▖","  ▌","  ▌","▄▄▖","▙▄▌","▙▄▌","▄▄▖","▙▄▌","▄▄▌"};
 	// ▗▄  ▗▄▖ ▗▄▖ ▄ ▄ ▗▄▖ ▄▄▖ ▄▄▖ ▄▄▖ ▄▄▖
@@ -171,25 +127,82 @@ void print_large_generated_sudoku(uint8_t* sudoku){
     		abAppend(&ab,"  ╎  ",7);
     	}
     }
-    write(STDOUT_FILENO,ab.b,ab.len);
+	abAppend(&ab,"\x1b[?25h",6);
+    if(write(STDOUT_FILENO,ab.b,ab.len)){
+    	abFree(&ab);
+    	exit(1);
+    }
     abFree(&ab);
 }
 
-void print_small_sudoku(uint8_t* sudoku){
+void print_large_generated_sudoku(uint8_t sudoku[81]){
+	///im lazy, ill improve it later
+	const uint8_t num_len[]={7,5,9,9,9,9,9,9,9,7,9,5,9,9,9,9,9,9,9,5,5,9,9,9,9,9,9};
+	const char* num[]={"▗▄ "," █ ","▗█▖","▗▄▖","▗▄▌","▐▄▖","▗▄▖","▗▄▌","▗▄▌","▄ ▄","▜▃█","  █","▗▄▖","▐▄▖","▗▄▌","▄▄▖","▙▄▖","▙▄▌","▄▄▖","  ▌","  ▌","▄▄▖","▙▄▌","▙▄▌","▄▄▖","▙▄▌","▄▄▌"};
+	// ▗▄  ▗▄▖ ▗▄▖ ▄ ▄ ▗▄▖ ▄▄▖ ▄▄▖ ▄▄▖ ▄▄▖
+	//  █  ▗▄▌ ▗▄▌ ▜▃█ ▐▄▖ ▙▄▖   ▌ ▙▄▌ ▙▄▌
+	// ▗█▖ ▐▄▖ ▗▄▌   █ ▗▄▌ ▙▄▌   ▌ ▙▄▌ ▄▄▌
+	struct abuf ab=ABUF_INIT;
+	abAppend(&ab,"\x1b[?25l",6);
+	abAppend(&ab,"\x1b[H",3);
+    abAppend(&ab,"┏━━━━━━━┯━━━━━━━┯━━━━━━━┳━━━━━━━┯━━━━━━━┯━━━━━━━┳━━━━━━━┯━━━━━━━┯━━━━━━━┓\r\n┃  ",226);//8*9*3+3+2+10*9+3+2+3
+    for(uint8_t i=0,j=0;i<81;i++){
+    	if(sudoku[i]==0){
+    		abAppend(&ab,"   ",3);
+    	}
+    	else{
+    		uint8_t p=(sudoku[i]-1)*3+j;
+    		abAppend(&ab,num[p],num_len[p]);
+    	}
+    	if(i%9==8){
+    		if(j!=2){
+    			i-=9;
+    			j++;
+    			abAppend(&ab,"  ┃\r\n┃  ",12);
+    		}else{
+    			j=0;
+	    		if(i!=80){
+	    			if(i%27==26){
+	    				abAppend(&ab,"  ┃\r\n┣━━━━━━━┿━━━━━━━┿━━━━━━━╋━━━━━━━┿━━━━━━━┿━━━━━━━╋━━━━━━━┿━━━━━━━┿━━━━━━━┫\r\n┃  ",233);//97*2+3+219 
+	    			}
+	    			else{
+						abAppend(&ab,"  ┃\r\n┣╶╶╶╶╶╶╶├╶╶╶╶╶╶╶├╶╶╶╶╶╶╶┠╶╶╶╶╶╶╶├╶╶╶╶╶╶╶├╶╶╶╶╶╶╶┠╶╶╶╶╶╶╶├╶╶╶╶╶╶╶├╶╶╶╶╶╶╶┃\r\n┃  ",233);
+	    			}
+	    		}
+	    		else{
+	    			abAppend(&ab,"  ┃\r\n┗━━━━━━━┷━━━━━━━┷━━━━━━━┻━━━━━━━┷━━━━━━━┷━━━━━━━┻━━━━━━━┷━━━━━━━┷━━━━━━━┛\r\n",228);
+	    		}
+    		}
+    	}
+    	else if(i%3==2){
+    		abAppend(&ab,"  ┃  ",7);
+    	}
+    	else{
+    		abAppend(&ab,"  ╎  ",7);
+    	}
+    }
+	abAppend(&ab,"\x1b[?25h",6);
+    if(write(STDOUT_FILENO,ab.b,ab.len)){
+    	abFree(&ab);
+    	exit(1);
+    }
+    abFree(&ab);
+}
+
+void print_small_sudoku(uint8_t sudoku[81]){
 	//snprintf maybe
 	struct abuf ab=ABUF_INIT;
 	abAppend(&ab,"\x1b[?25l",6);
 	abAppend(&ab,"\x1b[H",3);
     abAppend(&ab,"╭───────┬───────┬───────╮\r\n│ ",82);
     for(uint8_t i=0;i<81;i++){
-    	if(*(sudoku+i)==0){
+    	if(sudoku[i]==0){
     		abAppend(&ab,"·",3);
     	}
     	else{
-    		char c[2];
-    		c[0]=48+*(sudoku+i);
-    		c[1]='\0';
-    		abAppend(&ab,c,2);
+    		char c[1];
+    		c[0]=48+sudoku[i];
+    		abAppend(&ab,c,1);
     	}
     	if(i%9==8){
     		if(i!=80){
@@ -210,7 +223,11 @@ void print_small_sudoku(uint8_t* sudoku){
     		abAppend(&ab," ",1);
     	}
     }
-    write(STDOUT_FILENO,ab.b,ab.len);
+    abAppend(&ab,"\x1b[?25h",6);
+    if(write(STDOUT_FILENO,ab.b,ab.len)){
+    	abFree(&ab);
+    	exit(1);
+    }
     abFree(&ab);
 }
 
@@ -224,21 +241,23 @@ _Bool process_key(void){
 }
 
 int main(int argc, char **argv){
-	//system("clear");
+	if(system("clear")){
+		return -1;
+	}
 	E.raw_mode=0;
 	enable_raw_mode(STDIN_FILENO);
-	// write(STDOUT_FILENO,"\x1b[0;0H",6);
-	uint8_t grid[81]={0,0,0,0,0,0,0,1,2,0,0,0,0,3,5,0,0,0,0,0,0,6,0,0,0,7,0,7,0,0,0,0,0,3,0,0,0,0,0,4,0,0,8,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,2,0,0,0,0,0,8,0,0,0,0,0,4,0,0,5,0,0,0,0,6,0,0};
-	//aa(grid);
-	print_large_generated_sudoku(grid);
+	uint8_t grid[]={0,6,9,0,5,0,3,0,0,0,8,1,0,9,3,0,0,5,0,0,5,4,8,0,0,1,0,9,2,6,0,0,0,7,0,8,0,5,0,0,0,0,0,4,9,0,0,0,0,0,9,6,0,1,0,0,4,0,3,8,0,2,7,0,0,0,0,4,5,0,0,0,5,1,0,2,7,6,8,0,4};
+	print_small_sudoku(grid);
 	// write(STDOUT_FILENO,"\033[?1003h",8);
 	while(1){
 		if(process_key()){
 			break;
 		}
 	}
-	printf("\033[?1003l");
-	// system("clear");
 	disable_raw_mode();
-	return 0;
+	printf("\033[?1003l");
+	printf("uhm");
+	if(system("clear")){
+		return -1;
+	}
 }
