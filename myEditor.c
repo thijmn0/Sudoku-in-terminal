@@ -62,7 +62,9 @@ fatal:
 	return -1;
 }
 
-void processKey(
+int processKey(int fd){
+	return 0;
+}
 
 #define ABUF_INIT {NULL,0};
 
