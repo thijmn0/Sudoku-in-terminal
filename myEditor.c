@@ -62,9 +62,26 @@ fatal:
 	return -1;
 }
 
-int processKey(int fd){
+_Bool process_key(void){
+	char c;
+	while ((read(STDIN_FILENO, &c, 1)) == 0&&c!='q');
+	if(c=='q'){
+		return 1;
+	}
 	return 0;
 }
+
+int processKey(int fd){
+	int nread;
+	char c;
+	char seq[4];
+	char pos[2];
+	
+	while((nread=read(fd,&c,1))==0);
+	if(nread=1){
+	return ESC;
+	}
+	}
 
 #define ABUF_INIT {NULL,0};
 
@@ -179,15 +196,6 @@ void print_small_sudoku(const uint8_t sudoku[81]){
     	//something went wrong
     }
     abFree(&ab);
-}
-
-_Bool process_key(void){
-	char c;
-	while ((read(STDIN_FILENO, &c, 1)) == 0&&c!='q');
-	if(c=='q'){
-		return 1;
-	}
-	return 0;
 }
 
 int main(int argc, char **argv){
